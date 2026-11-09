@@ -46,7 +46,7 @@ psql --version          # опційно
 
 ```bash
 git clone https://github.com/maksymlytvynchyk/Linkedin-scraper.git
-cd linkedin-jobs-parser
+cd Linkedin-scraper
 
 cp .env.example .env
 # відкрийте .env і задайте DJANGO_SECRET_KEY (див. нижче)
