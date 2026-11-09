@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Parser dashboard</h1>
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin:16px 0;">
+  <div style="border:1px solid #ddd;border-radius:8px;padding:12px 16px;min-width:140px;">
+    <div style="font-size:26px;font-weight:700;">{{ totals.vacancies }}</div>
+    <div>Vacancies</div>
+  </div>
+  <div style="border:1px solid #ddd;border-radius:8px;padding:12px 16px;min-width:140px;">
+    <div style="font-size:26px;font-weight:700;color:#01754f;">{{ totals.enriched }}</div>
+    <div>Enriched</div>
+  </div>
+  <div style="border:1px solid #ddd;border-radius:8px;padding:12px 16px;min-width:140px;">
+    <div style="font-size:26px;font-weight:700;color:#915907;">{{ totals.pending }}</div>
+    <div>Pending details</div>
+  </div>
+  <div style="border:1px solid #ddd;border-radius:8px;padding:12px 16px;min-width:140px;">
+    <div style="font-size:26px;font-weight:700;color:#a8000b;">{{ totals.failed }}</div>
+    <div>Failed</div>
+  </div>
+  <div style="border:1px solid #ddd;border-radius:8px;padding:12px 16px;min-width:140px;">
+    <div style="font-size:26px;font-weight:700;">{{ totals.companies }}</div>
+    <div>Companies</div>
+  </div>
+  <div style="border:1px solid #ddd;border-radius:8px;padding:12px 16px;min-width:140px;">
+    <div style="font-size:26px;font-weight:700;">{{ totals.queries }}</div>
+    <div>Search queries</div>
+  </div>
+</div>
+
+<h2>How to run the two stages</h2>
+<pre style="background:#f6f6f6;padding:12px;border-radius:8px;">
+python manage.py parse_search --all                       # stage 1: find vacancies
+python manage.py parse_details --all --with-company      # stage 2: enrich them
+python manage.py export_csv --out out/vacancies.csv      # deliverable
+</pre>
+
+<div style="display:flex;gap:32px;flex-wrap:wrap;">
+  <div style="min-width:320px;">
+    <h2>Top companies</h2>
+    <table style="border-collapse:collapse;">
+      <tr><th style="text-align:left;padding:4px 12px 4px 0;">Company</th><th>Vacancies</th></tr>
+      {% for c in top_companies %}
+      <tr>
+        <td style="padding:4px 12px 4px 0;">{{ c.name|default:c.slug }}</td>
+        <td style="text-align:right;">{{ c.n }}</td>
+      </tr>
+      {% empty %}
+      <tr><td>No data yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div style="min-width:320px;">
+    <h2>Top locations</h2>
+    <table style="border-collapse:collapse;">
+      <tr><th style="text-align:left;padding:4px 12px 4px 0;">Location</th><th>Vacancies</th></tr>
+      {% for loc in top_locations %}
+      <tr>
+        <td style="padding:4px 12px 4px 0;">{{ loc.location }}</td>
+        <td style="text-align:right;">{{ loc.n }}</td>
+      </tr>
+      {% empty %}
+      <tr><td>No data yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div style="min-width:320px;">
+    <h2>Processing status</h2>
+    <table style="border-collapse:collapse;">
+      {% for row in status_breakdown %}
+      <tr>
+        <td style="padding:4px 12px 4px 0;">{{ row.label }}</td>
+        <td style="text-align:right;">{{ row.value }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<h2>Recent search queries</h2>
+<ul>
+  {% for q in recent_queries %}
+  <li>
+    <a href="/admin/scraper/searchquery/{{ q.pk }}/change/">{{ q }}</a>
+    — {{ q.get_status_display }} — cards read: {{ q.progress }}
+  </li>
+  {% empty %}
+  <li>None yet. Create one in <a href="/admin/scraper/searchquery/add/">Search queries</a>.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

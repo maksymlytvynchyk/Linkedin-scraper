@@ -1,0 +1,42 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+.venv-*/
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+
+# vcs / IDE / OS
+.git/
+.gitignore
+.github/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+
+out/
+staticfiles/
+media/
+*.sqlite3
+*.log
+coverage.xml
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+
+README.md
+ANALYSIS.md
+USER_GUIDE.md
+samples/
+docker-compose.yml
+Dockerfile
+.dockerignore

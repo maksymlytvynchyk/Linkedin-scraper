@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: linkedin_jobs
+      POSTGRES_USER: linkedin
+      POSTGRES_PASSWORD: 12345678
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkedin -d linkedin_jobs"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-linkedin}:${POSTGRES_PASSWORD:-linkedin}@db:5432/${POSTGRES_DB:-linkedin_jobs}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set it in .env}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      LINKEDIN_MIN_DELAY: "0.8"
+      LINKEDIN_PROXY_URL: http://18a1fbafd4a0a409:3CLnxsFbgZlqX6SU@res.proxy-seller.com:10000
+    volumes:
+      - .:/app
+      - ./out:/app/out
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
