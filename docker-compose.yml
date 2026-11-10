@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: linkedin_jobs
       POSTGRES_USER: linkedin
@@ -26,7 +26,7 @@ services:
       DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
       LINKEDIN_MIN_DELAY: "0.8"
-      LINKEDIN_PROXY_URL: http://18a1fbafd4a0a409:3CLnxsFbgZlqX6SU@res.proxy-seller.com:10000
+      LINKEDIN_PROXY_URL: http://user:pass@host:port
     volumes:
       - .:/app
       - ./out:/app/out
