@@ -13,6 +13,35 @@ COMPANY_URL = "https://www.linkedin.com/company/{slug}"
 # LinkedIn answers 999 (a non-standard code) when it decides you are a bot.
 BOT_CODES = {403, 429, 999}
 
+DEFAULT_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.linkedin.com/jobs/search/",
+    "Connection": "keep-alive",
+}
+
+try:  # pragma: no cover - trivial import guard
+    from curl_cffi import requests as cffi_requests
+    from curl_cffi.curl import CurlError
+    from curl_cffi.requests.exceptions import HTTPError, RequestException
+
+    TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (RequestException, CurlError)
+except ImportError:  # pragma: no cover
+    cffi_requests = None
+
+    class CurlError(Exception):
+        """Placeholder used when curl_cffi is not installed."""
+
+    class RequestException(Exception):
+        """Placeholder used when curl_cffi is not installed."""
+
+    class HTTPError(RequestException):
+        """Placeholder used when curl_cffi is not installed."""
+
+        response = None
+
+    TRANSPORT_ERRORS = (RequestException, CurlError)
+
 
 class LinkedInError(RuntimeError):
     """Raised when a request cannot be completed."""
@@ -42,7 +71,7 @@ class RateLimiter:
 
 
 class LinkedInClient:
-    """Small throttled, retrying session around the three guest endpoints."""
+    """Small throttled, retrying curl_cffi session around the three endpoints."""
 
     def __init__(
         self,
@@ -51,34 +80,63 @@ class LinkedInClient:
         max_retries: int | None = None,
         proxy: str | None = None,
         user_agent: str | None = None,
+        impersonate: str | None = None,
         timeout: int = 30,
     ):
-        try:
-            import requests
-        except ImportError as exc:  # pragma: no cover
-            raise LinkedInError("`requests` is required: pip install requests") from exc
+        if cffi_requests is None:  # pragma: no cover
+            raise LinkedInError(
+                "curl_cffi is required: run `pip install curl_cffi` "
+                "(it is listed in requirements.txt)"
+            )
 
-        self._requests = requests
         self.timeout = timeout
-        self.max_retries = int(max_retries if max_retries is not None else getattr(settings, "LINKEDIN_MAX_RETRIES", 4))
+        self.max_retries = int(
+            max_retries
+            if max_retries is not None
+            else getattr(settings, "LINKEDIN_MAX_RETRIES", 4)
+        )
         self.limiter = RateLimiter(
-            min_delay if min_delay is not None else getattr(settings, "LINKEDIN_MIN_DELAY", 0.8)
+            min_delay
+            if min_delay is not None
+            else getattr(settings, "LINKEDIN_MIN_DELAY", 0.8)
         )
-        proxy = proxy if proxy is not None else getattr(settings, "LINKEDIN_PROXY_URL", "")
-        user_agent = user_agent or getattr(settings, "LINKEDIN_USER_AGENT", "Mozilla/5.0")
 
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "User-Agent": user_agent,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Referer": "https://www.linkedin.com/jobs/search/",
-                "Connection": "keep-alive",
-            }
+        proxy = proxy if proxy is not None else getattr(settings, "LINKEDIN_PROXY_URL", "")
+        user_agent = (
+            user_agent
+            or getattr(settings, "LINKEDIN_USER_AGENT", "")
+            or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
-        if proxy:
-            self.session.proxies.update({"http": proxy, "https": proxy})
+        # "chrome" = always the newest Chrome profile bundled with curl_cffi.
+        # Pin a version (e.g. "chrome131") if LinkedIn starts flagging the newest.
+        self.impersonate = (
+            impersonate
+            if impersonate is not None
+            else getattr(settings, "LINKEDIN_IMPERSONATE", "chrome")
+        ) or None
+
+        self._proxies = {"http": proxy, "https": proxy} if proxy else None
+
+        headers = dict(DEFAULT_HEADERS)
+        headers["User-Agent"] = user_agent
+
+        # NOTE: `impersonate` replaces the TLS/JA3 + HTTP/2 fingerprint.
+        # Our explicit headers are still sent (default_headers=False), so the
+        # User-Agent stays consistent with the configured one.
+        self.session = cffi_requests.Session(
+            impersonate=self.impersonate,
+            headers=headers,
+            proxies=self._proxies,
+            timeout=timeout,
+        )
+
+        logger.info(
+            "HTTP backend: curl_cffi (impersonate=%s, proxy=%s, timeout=%ss)",
+            self.impersonate or "off",
+            "yes" if self._proxies else "no",
+            timeout,
+        )
 
         self.stats = {"requests": 0, "retries": 0, "blocks": 0, "empty": 0}
 
@@ -91,10 +149,15 @@ class LinkedInClient:
             self.limiter.wait()
             self.stats["requests"] += 1
             try:
-                response = self.session.get(url, params=params, timeout=self.timeout)
-            except self._requests.RequestException as exc:
+                request_kwargs: dict[str, object] = {"timeout": self.timeout}
+                if self._proxies:
+                    request_kwargs["proxies"] = self._proxies
+                response = self.session.get(url, params=params, **request_kwargs)
+            except TRANSPORT_ERRORS as exc:
                 last_error = exc
-                logger.warning("network error (attempt %s/%s): %s", attempt, self.max_retries, exc)
+                logger.warning(
+                    "network error (attempt %s/%s): %s", attempt, self.max_retries, exc
+                )
                 self._backoff(attempt, reason="network")
                 continue
 
@@ -127,7 +190,11 @@ class LinkedInClient:
                 continue
 
             if 500 <= response.status_code < 600:
-                logger.warning("server error HTTP %s (attempt %s), retrying", response.status_code, attempt)
+                logger.warning(
+                    "server error HTTP %s (attempt %s), retrying",
+                    response.status_code,
+                    attempt,
+                )
                 self._backoff(attempt, reason="server")
                 last_error = LinkedInError(f"HTTP {response.status_code}")
                 continue
@@ -180,7 +247,7 @@ class LinkedInClient:
         url = JOB_DETAIL_URL.format(job_id=job_id)
         try:
             html = self.get(url)
-        except self._requests.HTTPError as exc:
+        except HTTPError as exc:
             status = exc.response.status_code if exc.response is not None else 0
             return "", status
         return html, 200
@@ -189,7 +256,7 @@ class LinkedInClient:
         url = COMPANY_URL.format(slug=slug)
         try:
             html = self.get(url)
-        except self._requests.HTTPError as exc:
+        except HTTPError as exc:
             status = exc.response.status_code if exc.response is not None else 0
             return "", status
         return html, 200

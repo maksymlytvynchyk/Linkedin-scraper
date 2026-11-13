@@ -136,7 +136,7 @@ class SearchQueryAdmin(admin.ModelAdmin):
             f'<code>python manage.py parse_details --all --with-company</code>'
         )
 
-    # -- actions -----------------------------------------------------------
+    # actions
     @admin.action(description="Reset pagination progress (re-crawl)")
     def reset_progress(self, request, queryset):
         for query in queryset:

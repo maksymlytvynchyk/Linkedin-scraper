@@ -1,6 +1,6 @@
 Django>=6.1
 psycopg[binary]
-requests>=2.34
+curl_cffi>=0.17
 beautifulsoup4>=4.15
 python-dotenv>=1.2
 openpyxl>=3.1.5

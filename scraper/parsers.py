@@ -2,7 +2,7 @@ import re
 
 from .models import extract_company_slug, extract_linkedin_id
 
-# --- selectors (LinkedIn public templates) ---------------------------------
+# selectors (LinkedIn public templates)
 CARD_ITEM = "li"                     # each card is an <li>
 CARD_LINK = "a.base-card__full-link"
 CARD_TITLE = "h3.base-search-card__title"
@@ -113,9 +113,7 @@ def parse_company_size(text: str) -> tuple[int | None, int | None]:
     return start, end
 
 
-# ---------------------------------------------------------------------------
 # Stage 1: search result cards
-# ---------------------------------------------------------------------------
 def parse_job_cards(html: str) -> list[dict]:
     """Parse the ``seeMoreJobPostings/search`` fragment into job dicts."""
     soup = _soup(html or "")
@@ -167,9 +165,7 @@ def parse_job_cards(html: str) -> list[dict]:
     return jobs
 
 
-# ---------------------------------------------------------------------------
 # Stage 2a: job details
-# ---------------------------------------------------------------------------
 def parse_job_detail(html: str) -> dict:
     """Parse the ``jobPosting/<id>`` fragment."""
     soup = _soup(html or "")
@@ -217,9 +213,7 @@ def parse_job_detail(html: str) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # Stage 2b: company page
-# ---------------------------------------------------------------------------
 def _criteria_pairs(soup) -> dict[str, str]:
     """LinkedIn renders company facts as <dl><dt>label</dt><dd>value</dd>."""
     pairs: dict[str, str] = {}

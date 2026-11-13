@@ -149,6 +149,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LINKEDIN_MIN_DELAY = env_float("LINKEDIN_MIN_DELAY", 0.8)
 LINKEDIN_MAX_RETRIES = env_int("LINKEDIN_MAX_RETRIES", 4)
 LINKEDIN_PROXY_URL = os.getenv("LINKEDIN_PROXY_URL", "").strip()
+LINKEDIN_IMPERSONATE = os.getenv("LINKEDIN_IMPERSONATE", "chrome").strip()
 LINKEDIN_USER_AGENT = os.getenv(
     "LINKEDIN_USER_AGENT",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
