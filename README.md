@@ -122,6 +122,7 @@ DATABASE_URL=postgres://linkedin:<пароль>@localhost:5432/linkedin_jobs
 ```bash
 python manage.py migrate
 python manage.py createsuperuser
+python manage.py runserver
 ```
 
 ---

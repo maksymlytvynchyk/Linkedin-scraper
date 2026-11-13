@@ -100,14 +100,8 @@ class SearchQueryAdmin(admin.ModelAdmin):
 
     @admin.display(description="Status")
     def status_badge(self, obj):
-        colours = {
-            QueryStatus.NEW: "#0a66c2",
-            QueryStatus.RUNNING: "#b24020",
-            QueryStatus.DONE: "#01754f",
-            QueryStatus.FAILED: "#a8000b",
-        }
-        colour = colours.get(obj.status, "#666")
-        return f'<b style="color:{colour}">{obj.get_status_display()}</b>'
+
+        return f'{obj.get_status_display()}'
 
     @admin.display(description="Cards read")
     def progress(self, obj):
@@ -132,8 +126,8 @@ class SearchQueryAdmin(admin.ModelAdmin):
     def run_instructions(self, obj):
         pk = obj.pk or "<id>"
         return (
-            f'<code>python manage.py parse_search --query-id {pk}</code><br>'
-            f'<code>python manage.py parse_details --all --with-company</code>'
+            f'python manage.py parse_search --query-id {pk}\n'
+            f'python manage.py parse_details --all --with-company'
         )
 
     # actions
@@ -223,25 +217,20 @@ class VacancyAdmin(admin.ModelAdmin):
     @admin.display(description="Company", ordering="company_name")
     def company_link(self, obj):
         if obj.company_id and obj.company.linkedin_url.startswith("http"):
-            return f'<a href="{obj.company.linkedin_url}" target="_blank" rel="noopener">{obj.company_name}</a>'
+            return (
+                f'{obj.company.linkedin_url}\n'
+            )
         return obj.company_name
 
     @admin.display(description="Status")
     def status_badge(self, obj):
-        colours = {
-            ParseStatus.PENDING: "#915907",
-            ParseStatus.FETCHED: "#01754f",
-            ParseStatus.FAILED: "#a8000b",
-            ParseStatus.GONE: "#666",
-        }
-        colour = colours.get(obj.status, "#666")
-        return f'<b style="color:{colour}">{obj.get_status_display()}</b>'
+        return f'{obj.get_status_display()}'
 
     @admin.display(description="LinkedIn URL")
     def url_link(self, obj):
         if not obj.url:
             return "—"
-        return f'<a href="{obj.url}" target="_blank" rel="noopener">{obj.url}</a>'
+        return f'{obj.url}'
 
     @admin.display(description="Matched by")
     def search_queries_list(self, obj):
