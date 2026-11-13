@@ -104,8 +104,9 @@ cp .env.example .env
 **Створіть базу** (один раз, від імені суперюзера `postgres`):
 
 ```bash
-& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "CREATE DATABASE linkedin_jobs OWNER linkedin;"
-& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "ALTER ROLE linkedin WITH CREATEDB;"
+& "C:\шлях\до\файлу\psql.exe" -U postgres -c "CREATE DATABASE linkedin_jobs OWNER linkedin;"
+& "C:\шлях\до\файлу\psql.exe" -U postgres -c "ALTER ROLE linkedin WITH CREATEDB;"
+Приклад: "C:\Program Files\PostgreSQL\18\bin\psql.exe"
 ```
 
 **Пропишіть у `.env`:**
